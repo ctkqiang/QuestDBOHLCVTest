@@ -17,7 +17,7 @@ export function useOHLCVChart() {
   const error = ref<string | null>(null);
 
   const fetchOHLCV = async (
-    stkNo: string = '1155.KL',
+    stkNo: string = '01810',
     timeframe: Timeframe = Timeframe.FifteenMinutes,
     range: string = '$now - 14d..$now'
   ) => {
@@ -30,15 +30,15 @@ export function useOHLCVChart() {
     const proxyBaseUrl = '/qdb';
     
     const query = `
-      SELECT 
-        time_received_iso, stk_no, 
-        first(best_bid_price) AS open, 
-        last(best_bid_price) AS close, 
-        min(best_bid_price) AS min, 
-        max(best_bid_price) AS max, 
-        sum(volume) AS volume 
+      SELECT
+        timestamp, 股票代码,
+        first(昨收盘) AS open,
+        last(昨收盘) AS close,
+        min(昨收盘),
+        max(昨收盘),
+        sum(成交量) AS volume
       FROM ${tableName} 
-      WHERE stk_no = '${stkNo}' AND time_received_iso IN '${range}' 
+      WHERE 股票代码 = '${stkNo}' AND timestamp IN '${range}' 
       SAMPLE BY ${timeframe};
     `.trim();
 

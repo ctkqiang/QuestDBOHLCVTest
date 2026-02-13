@@ -2,6 +2,7 @@
   <div class="ohlcv-container">
     <div class="controls">
       <select v-model="selectedStkNo" @change="refreshData">
+        <option value="01810">01810.HK (小米)</option>
         <option value="1155.KL">1155.KL (MAYBANK)</option>
         <option value="7113.KL">7113.KL (TOPGLOV)</option>
       </select>
