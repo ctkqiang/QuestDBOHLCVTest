@@ -1,31 +1,76 @@
 <template>
   <div class="ohlcv-container">
-    <div class="controls">
-      <select v-model="selectedStkNo" @change="refreshData">
-        <option value="1155.KL">1155.KL (MAYBANK)</option>
-        <option value="7113.KL">7113.KL (TOPGLOV)</option>
-      </select>
-      
-      <select v-model="selectedTimeframe" @change="refreshData">
-        <option v-for="(value, key) in Timeframe" :key="key" :value="value">
-          {{ key === 'OneMinute' ? '1分钟' : 
-             key === 'FiveMinutes' ? '5分钟' : 
-             key === 'FifteenMinutes' ? '15分钟' : 
-             key === 'OneHour' ? '1小时' : 
-             key === 'OneDay' ? '日线' : key }}
-        </option>
-      </select>
+    <!-- 顶部导航栏 -->
+    <header class="dev-toolbar">
+      <div class="brand">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+        </svg>
+        QuestDB Console
+      </div>
+      <div class="toolbar-actions">
+        <!-- 预留扩展区域 -->
+      </div>
+    </header>
 
-      <button :disabled="loading" @click="refreshData">
-        {{ loading ? '加载中...' : '刷新数据' }}
-      </button>
-    </div>
+    <main class="dev-main">
+      <!-- 左侧编辑器侧边栏 -->
+      <aside class="dev-sidebar">
+        <div class="editor-tabs">
+          <div class="tab-item active">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+            query.sql
+          </div>
+        </div>
+        
+        <div class="query-container">
+          <!-- 模拟行号 -->
+          <div class="line-numbers">
+            <div v-for="n in lineCount" :key="n">{{ n }}</div>
+          </div>
+          <textarea 
+            v-model="sqlQuery" 
+            placeholder="请输入 SQL 查询..."
+            spellcheck="false"
+            @keydown.ctrl.enter="refreshData"
+          ></textarea>
+        </div>
 
-    <div v-if="error" class="error-message">
-      {{ error }}
-    </div>
+        <div class="editor-actions">
+          <span class="shortcut-hint">Ctrl + Enter 运行</span>
+          <button class="btn-run" :disabled="loading" @click="refreshData">
+            <svg v-if="!loading" width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            <div v-else class="spinner"></div>
+            {{ loading ? '执行中...' : '运行查询' }}
+          </button>
+        </div>
+      </aside>
 
-    <v-chart class="chart" :option="chartOption" autoresize />
+      <!-- 右侧图表展示区 -->
+      <section class="dev-content">
+        <!-- 错误提示层 -->
+        <div v-if="error" class="error-panel">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <div>
+            <strong>查询错误:</strong> {{ error }}
+          </div>
+        </div>
+        
+        <v-chart class="chart" :option="chartOption" autoresize />
+      </section>
+    </main>
   </div>
 </template>
 
@@ -33,7 +78,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { use } from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
-import { CandlestickChart, BarChart } from 'echarts/charts';
+import { CandlestickChart, BarChart, LineChart } from 'echarts/charts';
 import {
   TitleComponent,
   TooltipComponent,
@@ -43,14 +88,14 @@ import {
 } from 'echarts/components';
 import VChart from 'vue-echarts';
 import { useOHLCVChart } from '../composables/useOHLCVChart';
-import { Timeframe } from '../types/Timeframe';
 import '../styles/chartStyle.css';
 
-// Register ECharts modules
+// 注册 ECharts 核心组件
 use([
   CanvasRenderer,
   CandlestickChart,
   BarChart,
+  LineChart,
   TitleComponent,
   TooltipComponent,
   GridComponent,
@@ -60,18 +105,38 @@ use([
 
 const { data, loading, error, fetchOHLCV } = useOHLCVChart();
 
-const selectedStkNo = ref('1155.KL');
-const selectedTimeframe = ref<Timeframe>(Timeframe.FifteenMinutes);
+// 初始化 SQL 查询语句
+const tableName = import.meta.env.VITE_QDB_TABLE || 'qdb';
+const sqlQuery = ref(`SELECT 
+  time_received_iso, stk_no, 
+  first(best_bid_price) AS open, 
+  last(best_bid_price) AS close, 
+  min(best_bid_price) AS min, 
+  max(best_bid_price) AS max, 
+  sum(volume) AS volume 
+FROM ${tableName} 
+WHERE stk_no = '1155.KL' 
+  AND time_received_iso IN '$now - 14d..$now' 
+SAMPLE BY 15m;`);
 
+// 计算编辑器行数
+const lineCount = computed(() => sqlQuery.value.split('\n').length || 1);
+
+// 刷新数据方法
 const refreshData = () => {
-  fetchOHLCV(selectedStkNo.value, selectedTimeframe.value);
+  fetchOHLCV(sqlQuery.value);
 };
 
 onMounted(() => {
   refreshData();
 });
 
+// ECharts 配置项计算属性
 const chartOption = computed(() => {
+  // 从 SQL 中提取股票代码用于标题展示
+  const stkMatch = sqlQuery.value.match(/stk_no\s*=\s*['"]([^'"]+)['"]/i);
+  const displayStk = stkMatch ? stkMatch[1] : 'QuestDB';
+
   const dates = data.value.map(item => item.time_received_iso);
   const values = data.value.map(item => [
     item.open,
@@ -82,48 +147,41 @@ const chartOption = computed(() => {
   ]);
 
   return {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#1e1e1e', // 匹配 VS Code 编辑器背景色
     title: {
-      text: `${selectedStkNo.value} K线图`,
-      left: 20,
-      top: 10,
+      text: `${displayStk} 行情分析`,
+      left: 30,
+      top: 20,
       textStyle: {
-        color: '#333'
+        color: '#cccccc',
+        fontSize: 14,
+        fontWeight: 400
       }
     },
     tooltip: {
       trigger: 'axis',
-      axisPointer: {
-        type: 'cross'
+      axisPointer: { 
+        type: 'cross',
+        lineStyle: { color: '#454545', type: 'dashed' }
       },
-      backgroundColor: 'rgba(255, 255, 255, 0.9)',
-      borderColor: '#ccc',
-      textStyle: {
-        color: '#333'
-      }
+      backgroundColor: '#252526',
+      borderColor: '#454545',
+      borderWidth: 1,
+      textStyle: { color: '#cccccc', fontSize: 12 },
+      extraCssText: 'box-shadow: 0 4px 12px rgba(0,0,0,0.5); border-radius: 2px;'
     },
     grid: [
-      {
-        left: '50',
-        right: '50',
-        height: '65%',
-        top: '60'
-      },
-      {
-        left: '50',
-        right: '50',
-        top: '78%',
-        height: '15%'
-      }
+      { left: '60', right: '40', height: '65%', top: '80' },
+      { left: '60', right: '40', top: '78%', height: '12%' }
     ],
     xAxis: [
       {
         type: 'category',
         data: dates,
         boundaryGap: false,
-        axisLine: { onZero: false, lineStyle: { color: '#333' } },
-        splitLine: { show: false },
-        axisLabel: { color: '#666' },
+        axisLine: { lineStyle: { color: '#454545' } },
+        splitLine: { show: true, lineStyle: { color: '#333', type: 'dashed' } },
+        axisLabel: { color: '#858585', fontSize: 11 },
         min: 'dataMin',
         max: 'dataMax'
       },
@@ -142,9 +200,9 @@ const chartOption = computed(() => {
     yAxis: [
       {
         scale: true,
-        axisLine: { lineStyle: { color: '#333' } },
-        splitLine: { show: true, lineStyle: { color: '#eee' } },
-        axisLabel: { color: '#666' }
+        axisLine: { show: false },
+        splitLine: { show: true, lineStyle: { color: '#333' } },
+        axisLabel: { color: '#858585', fontSize: 11 }
       },
       {
         scale: true,
@@ -157,58 +215,37 @@ const chartOption = computed(() => {
       }
     ],
     dataZoom: [
-      {
-        type: 'inside',
-        xAxisIndex: [0, 1],
-        start: 50,
-        end: 100
-      },
+      { type: 'inside', xAxisIndex: [0, 1], start: 10, end: 100 },
       {
         show: true,
         xAxisIndex: [0, 1],
         type: 'slider',
-        top: '94%',
-        start: 50,
+        bottom: 20,
+        start: 10,
         end: 100,
-        textStyle: {
-          color: '#333'
-        },
-        handleIcon: 'path://M10.7,11.9v-1.3H9.3v1.3c-4.9,0.3-8.8,4.4-8.8,9.4c0,5,3.9,9.1,8.8,9.4v1.3h1.3v-1.3c4.9-0.3,8.8-4.4,8.8-9.4C19.5,16.3,15.6,12.2,10.7,11.9z M13.3,24.4H6.7V23h6.6V24.4z M13.3,19.6H6.7v-1.4h6.6V19.6z',
-        handleSize: '80%',
-        dataBackground: {
-          areaStyle: {
-            color: '#ccc'
-          },
-          lineStyle: {
-            opacity: 0.8,
-            color: '#ccc'
-          }
-        },
-        selectedDataBackground: {
-          lineStyle: {
-            color: '#1890ff'
-          },
-          areaStyle: {
-            color: '#1890ff',
-            opacity: 0.1
-          }
-        },
-        brushSelect: true
+        height: 20,
+        handleSize: '100%',
+        handleStyle: { color: '#404040' },
+        textStyle: { color: '#858585' },
+        fillerColor: 'rgba(14, 99, 156, 0.2)',
+        borderColor: '#454545'
       }
     ],
     series: [
       {
-        name: '日K',
+        name: '价格',
         type: 'candlestick',
         data: values.map(v => v.slice(0, 4)),
+        barMaxWidth: '60%', // 限制 K 线最大宽度，防止数据量少时显得过大
         itemStyle: {
-          color: '#ef232a',      // 阳线填充（红）
-          color0: '#14b143',     // 阴线填充（绿）
-          borderColor: '#ef232a', // 阳线边框（红）
-          borderColor0: '#14b143' // 阴线边框（绿）
+          color: '#ef5350',      // 上涨 (红色)
+          color0: '#26a69a',     // 下跌 (绿色)
+          borderColor: '#ef5350',
+          borderColor0: '#26a69a'
         }
       },
       {
+        
         name: '成交量',
         type: 'bar',
         xAxisIndex: 1,
@@ -216,12 +253,10 @@ const chartOption = computed(() => {
         data: values.map((v) => {
           const itemOpen = v[0] ?? 0;
           const itemClose = v[1] ?? 0;
-          const isUp = itemClose >= itemOpen; // 收盘 >= 开盘 为涨
+          const isUp = itemClose >= itemOpen;
           return {
             value: v[4] ?? 0,
-            itemStyle: {
-              color: isUp ? '#ef232a' : '#14b143'
-            }
+            itemStyle: { color: isUp ? 'rgba(239, 83, 80, 0.5)' : 'rgba(38, 166, 154, 0.5)' }
           };
         })
       }

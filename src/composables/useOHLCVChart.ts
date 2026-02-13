@@ -16,32 +16,14 @@ export function useOHLCVChart() {
   const loading = ref(false);
   const error = ref<string | null>(null);
 
-  const fetchOHLCV = async (
-    stkNo: string = '1155.KL',
-    timeframe: Timeframe = Timeframe.FifteenMinutes,
-    range: string = '$now - 14d..$now'
-  ) => {
+  const fetchOHLCV = async (query: string) => {
+    if (!query) return;
+    
     loading.value = true;
     error.value = null;
 
-    const tableName = import.meta.env.VITE_QDB_TABLE || 'qdb';
-    
-    // Use relative path for Vite proxy
     const proxyBaseUrl = '/qdb';
     
-    const query = `
-      SELECT 
-        time_received_iso, stk_no, 
-        first(best_bid_price) AS open, 
-        last(best_bid_price) AS close, 
-        min(best_bid_price) AS min, 
-        max(best_bid_price) AS max, 
-        sum(volume) AS volume 
-      FROM ${tableName} 
-      WHERE stk_no = '${stkNo}' AND time_received_iso IN '${range}' 
-      SAMPLE BY ${timeframe};
-    `.trim();
-
     try {
       const url = `${proxyBaseUrl}/exec?query=${encodeURIComponent(query)}`;
       const response = await fetch(url, {
