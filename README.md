@@ -1,5 +1,69 @@
-# Vue 3 + TypeScript + Vite
+# QuestDB OHLCV 测试项目
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+一个基于 Vue 3、TypeScript 和 QuestDB 构建的高性能股票图表应用程序。通过 ECharts 实现实时 OHLCV（开盘价、最高价、最低价、收盘价、成交量）数据可视化。
 
-Learn more about the recommended Project Setup and IDE Support in the [Vue Docs TypeScript Guide](https://vuejs.org/guide/typescript/overview.html#project-setup).
+## 主要特性
+
+- **全屏可视化**：优化后的 100x100 窗口自适应 UI，支持深色模式。
+- **动态图表**：基于 Apache ECharts 的 K 线图和成交量图。
+- **时间周期切换**：支持多种时间周期（1m, 15m, 1d 等），配合 QuestDB 动态 SAMPLE BY 查询。
+- **QuestDB 集成**：通过 QuestDB REST API 进行高性能时序数据抓取。
+- **Vite 代理**：预配置反向代理，解决开发环境下的 CORS 跨域问题。
+
+## 技术栈
+
+- **前端框架**：Vue 3 (Composition API)
+- **开发语言**：TypeScript
+- **样式处理**：标准 CSS，含全屏布局优化
+- **图表库**：ECharts & vue-echarts
+- **数据库**：QuestDB
+- **构建工具**：Vite
+- **路由管理**：Vue Router
+
+## 安装指南
+
+1. **克隆仓库**：
+   ```bash
+   git clone <repository-url>
+   cd QuestDBOHLCVTest
+   ```
+
+2. **安装依赖**：
+   ```bash
+   bun install
+   # 或者
+   npm install
+   ```
+
+3. **配置环境变量**：
+   复制示例环境文件并填写您的 QuestDB 配置：
+   ```bash
+   cp .env.example .env
+   ```
+   `.env` 中的关键变量：
+   - `VITE_QDB_HTTP_URL`: QuestDB REST API 端点（默认：`http://127.0.0.1:9000`）
+   - `VITE_QDB_TABLE`: QuestDB 中的表名（例如：`price_feed`）
+
+## 使用说明
+
+1. **启动开发服务器**：
+   ```bash
+   bun dev
+   # 或者
+   npm run dev
+   ```
+
+2. **访问应用**：
+   打开浏览器并访问 `http://localhost:5173`。
+
+## 项目结构
+
+- `src/components/`: UI 组件（如 [OHLCVCharView.vue](file:///c:/Users/ChengTzeKeong/Desktop/VFPrice/QuestDBOHLCVTest/src/components/OHLCVCharView.vue)）
+- `src/composables/`: 可复用逻辑（如用于数据抓取的 [useOHLCVChart.ts](file:///c:/Users/ChengTzeKeong/Desktop/VFPrice/QuestDBOHLCVTest/src/composables/useOHLCVChart.ts)）
+- `src/types/`: TypeScript 类型定义（如 [Timeframe.ts](file:///c:/Users/ChengTzeKeong/Desktop/VFPrice/QuestDBOHLCVTest/src/types/Timeframe.ts)）
+- `src/router/`: 路由配置
+- `vite.config.ts`: 包含 CORS 代理设置的 Vite 配置
+
+## CORS 配置
+
+项目包含 Vite 代理配置以处理 QuestDB 的 CORS 问题。所有发往 `/qdb` 的请求将自动转发到 `.env` 文件中定义的 `VITE_QDB_HTTP_URL`。
