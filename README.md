@@ -4,9 +4,10 @@
 
 ## 主要特性
 
-- **全屏可视化**：优化后的 100x100 窗口自适应 UI，支持深色模式。
+- **全屏可视化**：优化后的 100x100 窗口自适应 UI，支持现代亮色主题。
 - **动态图表**：基于 Apache ECharts 的 K 线图和成交量图。
-- **时间周期切换**：支持多种时间周期（1m, 15m, 1d 等），配合 QuestDB 动态 SAMPLE BY 查询。
+- **红涨绿跌**：遵循行业标准的配色方案。
+- **时间周期切换**：支持多种时间周期（1分钟、5分钟、15分钟、1小时、日线），配合 QuestDB 动态 SAMPLE BY 查询。
 - **QuestDB 集成**：通过 QuestDB REST API 进行高性能时序数据抓取。
 - **Vite 代理**：预配置反向代理，解决开发环境下的 CORS 跨域问题。
 
@@ -14,7 +15,7 @@
 
 - **前端框架**：Vue 3 (Composition API)
 - **开发语言**：TypeScript
-- **样式处理**：标准 CSS，含全屏布局优化
+- **样式处理**：标准 CSS，样式已从组件提取至独立文件
 - **图表库**：ECharts & vue-echarts
 - **数据库**：QuestDB
 - **构建工具**：Vite
@@ -59,6 +60,7 @@
 ## 项目结构
 
 - `src/components/`: UI 组件（如 [OHLCVCharView.vue](file:///c:/Users/ChengTzeKeong/Desktop/VFPrice/QuestDBOHLCVTest/src/components/OHLCVCharView.vue)）
+- `src/styles/`: 样式文件（如 [chartStyle.css](file:///c:/Users/ChengTzeKeong/Desktop/VFPrice/QuestDBOHLCVTest/src/styles/chartStyle.css)）
 - `src/composables/`: 可复用逻辑（如用于数据抓取的 [useOHLCVChart.ts](file:///c:/Users/ChengTzeKeong/Desktop/VFPrice/QuestDBOHLCVTest/src/composables/useOHLCVChart.ts)）
 - `src/types/`: TypeScript 类型定义（如 [Timeframe.ts](file:///c:/Users/ChengTzeKeong/Desktop/VFPrice/QuestDBOHLCVTest/src/types/Timeframe.ts)）
 - `src/router/`: 路由配置
@@ -67,3 +69,7 @@
 ## CORS 配置
 
 项目包含 Vite 代理配置以处理 QuestDB 的 CORS 问题。所有发往 `/qdb` 的请求将自动转发到 `.env` 文件中定义的 `VITE_QDB_HTTP_URL`。
+
+## 许可证
+
+仅供内部使用
