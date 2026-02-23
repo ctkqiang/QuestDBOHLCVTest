@@ -34,12 +34,15 @@
           <div class="line-numbers">
             <div v-for="n in lineCount" :key="n">{{ n }}</div>
           </div>
-          <textarea 
-            v-model="sqlQuery" 
-            placeholder="请输入 SQL 查询..."
-            spellcheck="false"
-            @keydown.ctrl.enter="refreshData"
-          ></textarea>
+          <div class="editor-scroll-container">
+            <div class="code-highlight" v-html="highlightedCode"></div>
+            <textarea 
+              v-model="sqlQuery" 
+              placeholder="请输入 SQL 查询..."
+              spellcheck="false"
+              @keydown.ctrl.enter="refreshData"
+            ></textarea>
+          </div>
         </div>
 
         <div class="editor-actions">
@@ -115,12 +118,83 @@ const sqlQuery = ref(`SELECT
   max(best_bid_price) AS max, 
   sum(volume) AS volume 
 FROM ${tableName} 
-WHERE stk_no = '1155.KL' 
+WHERE stk_no = '01810.HK' 
   AND time_received_iso IN '$now - 14d..$now' 
 SAMPLE BY 15m;`);
 
 // 计算编辑器行数
 const lineCount = computed(() => sqlQuery.value.split('\n').length || 1);
+
+// SQL 语法高亮逻辑
+const highlightedCode = computed(() => {
+  const code = sqlQuery.value;
+  if (!code) return '';
+
+  // HTML 转义防止 XSS
+  const escapeHtml = (text: string) => {
+    return text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  };
+
+  
+  let html = escapeHtml(code);
+
+
+  // 关键字列表 (GitHub Light Red: #cf222e)
+  const keywords = /\b(SELECT|FROM|WHERE|AND|OR|AS|IN|SAMPLE BY|LIMIT|ORDER BY|GROUP BY|LEFT JOIN|RIGHT JOIN|INNER JOIN|ON|DISTINCT|CASE|WHEN|THEN|ELSE|END|CREATE|TABLE|DROP|ALTER|INSERT|INTO|VALUES|UPDATE|DELETE|UNION|ALL|LATEST|ON)\b/gi;
+  
+  // 函数列表 (GitHub Light Purple: #8250df)
+  const functions = /\b(first|last|min|max|sum|avg|count|abs|round|floor|ceil|to_str|to_date|to_timestamp|now|date_trunc)\b/gi;
+
+  // QuestDB 特有时间单位/数字 (GitHub Light Blue: #0550ae)
+  const numbers = /\b\d+(\.\d+)?(us|ms|s|m|h|d)?\b/gi;
+
+  const tokens: string[] = [];
+  const regex = /(--.*$)|('([^'\\]|\\.)*')|("([^"\\]|\\.)*")|(\b\d+(\.\d+)?(us|ms|s|m|h|d)?\b)|(\b(SELECT|FROM|WHERE|AND|OR|AS|IN|SAMPLE BY|LIMIT|ORDER BY|GROUP BY|LEFT JOIN|RIGHT JOIN|INNER JOIN|ON|DISTINCT|CASE|WHEN|THEN|ELSE|END|CREATE|TABLE|DROP|ALTER|INSERT|INTO|VALUES|UPDATE|DELETE|UNION|ALL|LATEST|ON)\b)|(\b(first|last|min|max|sum|avg|count|abs|round|floor|ceil|to_str|to_date|to_timestamp|now|date_trunc)\b)|([a-zA-Z_]\w*)|(\s+)|(.)/gim;
+
+  let match;
+  
+  // 重置正则索引
+  regex.lastIndex = 0;
+
+  while ((match = regex.exec(code)) !== null) {
+    const fullMatch = match[0];
+    const comment = match[1];
+    const strSingle = match[2];
+    const strDouble = match[4];
+    const number = match[6];
+    const keyword = match[9];
+    const func = match[11];
+    // identifier (match[13]), whitespace (match[14]), other (match[15]) are just treated as text
+
+    if (comment) {
+      tokens.push(`<span class="hl-comment">${escapeHtml(comment)}</span>`);
+    } else if (strSingle || strDouble) {
+      tokens.push(`<span class="hl-string">${escapeHtml(fullMatch)}</span>`);
+    } else if (number) {
+      tokens.push(`<span class="hl-number">${escapeHtml(fullMatch)}</span>`);
+    } else if (keyword) {
+      // 保持原有大小写，或者统一大写
+      tokens.push(`<span class="hl-keyword">${escapeHtml(fullMatch)}</span>`); 
+    } else if (func) {
+      tokens.push(`<span class="hl-function">${escapeHtml(fullMatch)}</span>`);
+    } else {
+      tokens.push(escapeHtml(fullMatch));
+    }
+  }
+
+  // 如果最后有一个换行符，可能会被忽略导致行高不对，添加一个零宽空格或者不处理（white-space: pre handles it usually, but last newline might need help）
+  // 实际上 textarea 的 value 如果以 \n 结尾，显示时会多一行。
+  if (code.endsWith('\n')) {
+    tokens.push('\n'); 
+  }
+
+  return tokens.join('');
+});
 
 // 刷新数据方法
 const refreshData = () => {
@@ -147,28 +221,28 @@ const chartOption = computed(() => {
   ]);
 
   return {
-    backgroundColor: '#1e1e1e', // 匹配 VS Code 编辑器背景色
+    backgroundColor: '#ffffff', // 匹配 VS Code 浅色模式背景色
     title: {
       text: `${displayStk} 行情分析`,
       left: 30,
       top: 20,
       textStyle: {
-        color: '#cccccc',
+        color: '#333333',
         fontSize: 14,
-        fontWeight: 400
+        fontWeight: 500
       }
     },
     tooltip: {
       trigger: 'axis',
       axisPointer: { 
         type: 'cross',
-        lineStyle: { color: '#454545', type: 'dashed' }
+        lineStyle: { color: '#cccccc', type: 'dashed' }
       },
-      backgroundColor: '#252526',
-      borderColor: '#454545',
+      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+      borderColor: '#e0e0e0',
       borderWidth: 1,
-      textStyle: { color: '#cccccc', fontSize: 12 },
-      extraCssText: 'box-shadow: 0 4px 12px rgba(0,0,0,0.5); border-radius: 2px;'
+      textStyle: { color: '#333333', fontSize: 12 },
+      extraCssText: 'box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 4px;'
     },
     grid: [
       { left: '60', right: '40', height: '65%', top: '80' },
@@ -179,9 +253,9 @@ const chartOption = computed(() => {
         type: 'category',
         data: dates,
         boundaryGap: false,
-        axisLine: { lineStyle: { color: '#454545' } },
-        splitLine: { show: true, lineStyle: { color: '#333', type: 'dashed' } },
-        axisLabel: { color: '#858585', fontSize: 11 },
+        axisLine: { lineStyle: { color: '#d0d0d0' } },
+        splitLine: { show: true, lineStyle: { color: '#f0f0f0', type: 'dashed' } },
+        axisLabel: { color: '#666666', fontSize: 11 },
         min: 'dataMin',
         max: 'dataMax'
       },
@@ -201,8 +275,8 @@ const chartOption = computed(() => {
       {
         scale: true,
         axisLine: { show: false },
-        splitLine: { show: true, lineStyle: { color: '#333' } },
-        axisLabel: { color: '#858585', fontSize: 11 }
+        splitLine: { show: true, lineStyle: { color: '#f0f0f0' } },
+        axisLabel: { color: '#666666', fontSize: 11 }
       },
       {
         scale: true,
@@ -225,10 +299,10 @@ const chartOption = computed(() => {
         end: 100,
         height: 20,
         handleSize: '100%',
-        handleStyle: { color: '#404040' },
-        textStyle: { color: '#858585' },
-        fillerColor: 'rgba(14, 99, 156, 0.2)',
-        borderColor: '#454545'
+        handleStyle: { color: '#ffffff', borderColor: '#d0d0d0' },
+        textStyle: { color: '#666666' },
+        fillerColor: 'rgba(0, 122, 204, 0.1)',
+        borderColor: '#e0e0e0'
       }
     ],
     series: [
@@ -245,7 +319,6 @@ const chartOption = computed(() => {
         }
       },
       {
-        
         name: '成交量',
         type: 'bar',
         xAxisIndex: 1,
