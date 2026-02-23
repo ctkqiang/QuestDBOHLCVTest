@@ -1,21 +1,24 @@
 # QuestDB OHLCV 测试项目
 
-一个基于 Vue 3、TypeScript 和 QuestDB 构建的高性能股票图表应用程序。通过 ECharts 实现实时 OHLCV（开盘价、最高价、最低价、收盘价、成交量）数据可视化。
+一个基于 Vue 3、TypeScript 和 QuestDB 构建的高性能股票图表应用程序。通过 ECharts 实现实时 OHLCV（开盘价、最高价、最低价、收盘价、成交量）数据可视化，并支持 SQL 查询与语法高亮。
 
 ## 主要特性
 
-- **自定义 SQL 查询**：支持直接输入 QuestDB SQL 语句进行灵活的数据检索和聚合。
-- **全屏可视化**：优化后的 100x100 窗口自适应 UI，支持现代亮色主题。
-- **动态图表**：基于 Apache ECharts 的 K 线图和成交量图。
-- **红涨绿跌**：遵循行业标准的配色方案。
-- **QuestDB 集成**：通过 QuestDB REST API 进行高性能时序数据抓取。
+- **自定义 SQL 查询**：支持直接输入 QuestDB SQL 语句进行灵活的数据检索和聚合。内置**实时语法高亮**（关键字、函数、QuestDB 特有时间单位），提供专业的代码编辑体验。
+- **GitHub Light 主题**：全站采用 GitHub Light 风格配色，提供清爽、现代的代码阅读与图表浏览界面。
+- **专业 K 线图表**：基于 ECharts 深度定制的 OHLCV 图表，支持智能缩放、自适应 K 线宽度、红涨绿跌配色及成交量分析。
+- **QuestDB 集成**：通过 QuestDB REST API 进行高性能时序数据抓取，支持 `SAMPLE BY` 等高级聚合查询。
+- **响应式布局**：侧边栏编辑器与右侧图表自适应布局，优化宽屏显示。
 - **Vite 代理**：预配置反向代理，解决开发环境下的 CORS 跨域问题。
+
+## Demo
+![](./src/assets/questDB.png)
 
 ## 技术栈
 
 - **前端框架**：Vue 3 (Composition API)
 - **开发语言**：TypeScript
-- **样式处理**：标准 CSS，样式已从组件提取至独立文件
+- **样式处理**：CSS Variables + GitHub Light Theme
 - **图表库**：ECharts & vue-echarts
 - **数据库**：QuestDB
 - **构建工具**：Vite
