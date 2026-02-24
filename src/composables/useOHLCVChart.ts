@@ -11,7 +11,7 @@ export interface OHLCVData {
   volume: number;
 }
 
-export function useOHLCVChart() {
+export function useOHLCVChart() {   
   const data = ref<OHLCVData[]>([]);
   const loading = ref(false);
   const error = ref<string | null>(null);

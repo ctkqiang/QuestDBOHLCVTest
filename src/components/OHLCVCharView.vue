@@ -312,10 +312,10 @@ const chartOption = computed(() => {
         data: values.map(v => v.slice(0, 4)),
         barMaxWidth: '60%', // 限制 K 线最大宽度，防止数据量少时显得过大
         itemStyle: {
-          color: '#ef5350',      // 上涨 (红色)
-          color0: '#26a69a',     // 下跌 (绿色)
-          borderColor: '#ef5350',
-          borderColor0: '#26a69a'
+          color: '#cf222e',      // 上涨 (红色 - GitHub Red)
+          color0: '#1a7f37',     // 下跌 (绿色 - GitHub Green)
+          borderColor: '#cf222e',
+          borderColor0: '#1a7f37'
         }
       },
       {
@@ -329,7 +329,7 @@ const chartOption = computed(() => {
           const isUp = itemClose >= itemOpen;
           return {
             value: v[4] ?? 0,
-            itemStyle: { color: isUp ? 'rgba(239, 83, 80, 0.5)' : 'rgba(38, 166, 154, 0.5)' }
+            itemStyle: { color: isUp ? 'rgba(207, 34, 46, 0.5)' : 'rgba(26, 127, 55, 0.5)' }
           };
         })
       }
