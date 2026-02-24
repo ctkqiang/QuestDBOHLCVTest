@@ -241,6 +241,51 @@ textarea {
   cursor: not-allowed;
 }
 
+/* 顶部信息栏 */
+.chart-header {
+  position: absolute;
+  top: 10px;
+  left: 20px;
+  right: 20px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-family: var(--font-code);
+  font-size: 13px;
+  pointer-events: none; /* 让鼠标穿透，不影响图表交互 */
+}
+
+.chart-header .symbol {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.ohlc-data {
+  display: flex;
+  gap: 12px;
+  color: var(--text-primary);
+}
+
+.ohlc-data span {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.ohlc-data .text-up {
+  color: #cf222e; /* GitHub Red for Up */
+}
+
+.ohlc-data .text-down {
+  color: #1a7f37; /* GitHub Green for Down */
+}
+
+.ohlc-data .time {
+  color: var(--text-muted);
+  margin-left: 8px;
+}
+
 /* 错误提示层 */
 .error-panel {
   position: absolute;

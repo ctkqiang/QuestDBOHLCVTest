@@ -59,6 +59,19 @@
 
       <!-- 右侧图表展示区 -->
       <section class="dev-content">
+        <!-- 顶部信息栏 -->
+        <div class="chart-header">
+          <span class="symbol">{{ displayStk }} 行情分析</span>
+          <div class="ohlc-data" v-if="currentOHLC">
+            <span>O: <span :class="currentOHLC.close >= currentOHLC.open ? 'text-up' : 'text-down'">{{ currentOHLC.open }}</span></span>
+            <span>H: <span :class="currentOHLC.close >= currentOHLC.open ? 'text-up' : 'text-down'">{{ currentOHLC.high }}</span></span>
+            <span>L: <span :class="currentOHLC.close >= currentOHLC.open ? 'text-up' : 'text-down'">{{ currentOHLC.low }}</span></span>
+            <span>C: <span :class="currentOHLC.close >= currentOHLC.open ? 'text-up' : 'text-down'">{{ currentOHLC.close }}</span></span>
+            <span>V: {{ currentOHLC.volume }}</span>
+            <span class="time">{{ currentOHLC.time_received_iso }}</span>
+          </div>
+        </div>
+
         <!-- 错误提示层 -->
         <div v-if="error" class="error-panel">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -71,14 +84,14 @@
           </div>
         </div>
         
-        <v-chart class="chart" :option="chartOption" autoresize />
+        <v-chart class="chart" :option="chartOption" autoresize @highlight="onHighlight" @globalout="onGlobalOut" />
       </section>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { use } from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
 import { CandlestickChart, BarChart, LineChart } from 'echarts/charts';
@@ -201,16 +214,50 @@ const refreshData = () => {
   fetchOHLCV(sqlQuery.value);
 };
 
+// 当前展示的 OHLC 数据
+const currentOHLC = ref<any>(null);
+
+// 更新 OHLC 数据
+const updateOHLC = (index: number) => {
+  if (data.value && data.value[index]) {
+    currentOHLC.value = data.value[index];
+  }
+};
+
+// 监听数据变化，默认显示最后一条
+watch(data, (newData) => {
+  if (newData && newData.length > 0) {
+    updateOHLC(newData.length - 1);
+  }
+});
+
+// 处理高亮事件 (鼠标悬停)
+const onHighlight = (params: any) => {
+  // params.batch[0].dataIndex
+  if (params.batch && params.batch.length > 0) {
+    updateOHLC(params.batch[0].dataIndex);
+  }
+};
+
+// 处理鼠标移出图表区域
+const onGlobalOut = () => {
+  if (data.value && data.value.length > 0) {
+    updateOHLC(data.value.length - 1);
+  }
+};
+
 onMounted(() => {
   refreshData();
 });
 
+// 提取股票代码
+const displayStk = computed(() => {
+  const stkMatch = sqlQuery.value.match(/stk_no\s*=\s*['"]([^'"]+)['"]/i);
+  return stkMatch ? stkMatch[1] : 'QuestDB';
+});
+
 // ECharts 配置项计算属性
 const chartOption = computed(() => {
-  // 从 SQL 中提取股票代码用于标题展示
-  const stkMatch = sqlQuery.value.match(/stk_no\s*=\s*['"]([^'"]+)['"]/i);
-  const displayStk = stkMatch ? stkMatch[1] : 'QuestDB';
-
   const dates = data.value.map(item => item.time_received_iso);
   const values = data.value.map(item => [
     item.open,
@@ -222,16 +269,7 @@ const chartOption = computed(() => {
 
   return {
     backgroundColor: '#ffffff', // 匹配 VS Code 浅色模式背景色
-    title: {
-      text: `${displayStk} 行情分析`,
-      left: 30,
-      top: 20,
-      textStyle: {
-        color: '#333333',
-        fontSize: 14,
-        fontWeight: 500
-      }
-    },
+    // title 移除，使用自定义 HTML 覆盖层
     tooltip: {
       trigger: 'axis',
       axisPointer: { 
